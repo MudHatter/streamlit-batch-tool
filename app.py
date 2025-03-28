@@ -1,3 +1,4 @@
-print("Hello!!!!!")
+import streamlit as st
 
-print("Anyone there?????")
+st.title("Streamlitアプリへようこそ！")
+st.write("この画面が見えたら、デプロイ成功です 🎉")
