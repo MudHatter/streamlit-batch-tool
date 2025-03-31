@@ -4,6 +4,9 @@ from openai import OpenAI
 from io import BytesIO
 import fugashi
 from datetime import datetime, timedelta, timezone
+import random
+import json
+import os
 
 # 日本時間（JST）に変換
 JST = timezone(timedelta(hours=9))
@@ -19,6 +22,18 @@ def convert_df(df):
     output = BytesIO()
     df.to_excel(output, index=False, engine="openpyxl")
     return output.getvalue()
+
+# --- 辞書読み込み ---
+def load_replacement_dict():
+    path = "replacement_dict.json"
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    else:
+        st.warning("⚠ 置換辞書（replacement_dict.json）が見つかりません。")
+        return {}
+
+replacement_dict = load_replacement_dict()
 
 # --- 業務分割処理 ---
 def job_split():
@@ -183,7 +198,6 @@ def run_rewrite_combined():
     if "rewrite_combined_output" not in st.session_state:
         st.session_state.rewrite_combined_output = None
 
-    # リセットボタン
     if st.button("🔄 リセット"):
         st.session_state.rewrite_combined_output = None
 
@@ -204,29 +218,40 @@ def run_rewrite_combined():
                 title = str(df.iloc[i, 0])
                 detail = str(df.iloc[i, 1])
 
-                for _ in range(num_copies):
-                    # 職種名バリエーション生成
-                    title_prompt = f"""
-以下の職種名をもとに、求人広告で使える自然なバリエーションを1つ作成してください。
-同じ意味を保ちつつ、単語の順序や語尾などを変えてください。
-「〇〇（バリエーション2）」のような表現は禁止です。
+                words = list(tagger(title))
+                word_surfaces = [w.surface for w in words]
 
-元の職種名: {title}
----
-職種名:
-"""
+                for _ in range(num_copies):
+                    replaced_words = []
+                    for word in word_surfaces:
+                        if word in replacement_dict:
+                            replaced = random.choice(replacement_dict[word])
+                            replaced_words.append(replaced)
+                        else:
+                            replaced_words.append(word)
+                    raw_variation = ''.join(replaced_words)
+
+                    # AIで整形
                     try:
-                        title_response = client.chat.completions.create(
+                        prompt = f"""
+以下の職種名を、求人広告で使える自然な職種名に整えてください。
+---
+元の職種名（案）: {raw_variation}
+---
+整形後:
+"""
+                        response = client.chat.completions.create(
                             model="gpt-3.5-turbo",
-                            messages=[{"role": "user", "content": title_prompt}],
-                            temperature=0.7
+                            messages=[{"role": "user", "content": prompt}],
+                            temperature=0.5
                         )
-                        new_title = title_response.choices[0].message.content.strip()
+                        new_title = response.choices[0].message.content.strip()
                     except Exception as e:
                         new_title = f"[ERROR] {e}"
 
-                    # 仕事内容案内文生成
-                    detail_prompt = f"""
+                    # 案内文生成
+                    try:
+                        prompt = f"""
 以下の職種名と仕事内容をもとに、単語を言い換えたり、記号を変更したり、語順を変更したりして、全く異なる表現にリライトしてください。
 出力は、求人広告で使用する自然な文章で作成してください。
 ---
@@ -235,17 +260,15 @@ def run_rewrite_combined():
 ---
 案内文:
 """
-                    try:
-                        detail_response = client.chat.completions.create(
+                        response = client.chat.completions.create(
                             model="gpt-3.5-turbo",
-                            messages=[{"role": "user", "content": detail_prompt}],
+                            messages=[{"role": "user", "content": prompt}],
                             temperature=0.7
                         )
-                        new_detail = detail_response.choices[0].message.content.strip()
+                        new_detail = response.choices[0].message.content.strip()
                     except Exception as e:
                         new_detail = f"[ERROR] {e}"
 
-                    # 縦展開で1行ずつ記録
                     results.append({
                         "元の職種名": title,
                         "元の仕事内容": detail,
@@ -267,7 +290,6 @@ def run_rewrite_combined():
             file_name="ai_job_rewrite_output.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
 
 # --- アプリ切り替えメニュー ---
 menu = st.sidebar.radio("処理を選択してください", ["業務分割", "言い換え複製"])
