@@ -56,9 +56,9 @@ if uploaded_file is not None:
 
     # ダウンロード用
     def convert_df(df):
-    output = BytesIO()
-    df.to_excel(output, index=False, engine="openpyxl")
-    return output.getvalue()
+        output = BytesIO()
+        df.to_excel(output, index=False, engine="openpyxl")
+        return output.getvalue()
 
     excel_data = convert_df(df)
 
