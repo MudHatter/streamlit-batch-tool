@@ -70,9 +70,9 @@ def expand_to_rows(df):
         for task in tasks:
             formatted = format_task(task, prefix, suffix)
             rows.append({
-                "職種": title,
-                "元の説明": detail,
-                "作業": formatted
+                df.columns[0]: title,  # A列の見出しを維持
+                df.columns[1]: detail,  # B列の見出しを維持
+                "分割後の職種名": formatted
             })
 
     return pd.DataFrame(rows)
@@ -148,18 +148,23 @@ if uploaded_file is not None:
 
     # 作業詳細を追加
     st.info("作業の詳細をAIで説明中...")
-    df_expanded["作業詳細"] = df_expanded.apply(
-        lambda row: describe_task(row["作業"], row["元の説明"]), axis=1
+    df_expanded["分割後の仕事詳細"] = df_expanded.apply(
+        lambda row: describe_task(row["分割後の職種名"], row[df.columns[1]]), axis=1
     )
 
     # 案内文に書き換え
     st.info("求人広告向けの案内文に変換中...")
-    df_expanded["案内文"] = df_expanded["作業詳細"].apply(rewrite_for_job_ad)
+    df_expanded["案内文"] = df_expanded["分割後の仕事詳細"].apply(rewrite_for_job_ad)
+
+    # 不要列を削除
+    # （削除不要な列は明示的に指定して保持）
+    df_result = df_expanded[[df.columns[0], df.columns[1], "分割後の職種名", "案内文"]].copy()
+    df_result.rename(columns={"分割後の職種名": "分割後の職種名", "案内文": "分割後の仕事詳細"}, inplace=True)
 
     st.success("✅ 全ステップ完了！")
-    st.dataframe(df_expanded.head(10))
+    st.dataframe(df_result.head(10))
 
-    excel_data = convert_df(df_expanded)
+    excel_data = convert_df(df_result)
     st.download_button(
         label="📥 結果をダウンロード（Excel）",
         data=excel_data,
