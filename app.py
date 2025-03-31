@@ -206,7 +206,8 @@ def job_rewrite():
 
                 for n in range(1, st.session_state.num_copies + 1):
                     prompt = f"""
-以下の職種名と仕事内容をもとに、求人広告向けの自然な言い回しに変えてください。
+以下の職種名と仕事内容をもとに、言葉の順番や記号、言い回しを変更して、全く違う表現の文章にリライトしてください。
+文章は求人広告向けの自然な言い回しで作成してください。
 
 元の職種名: {title}
 元の仕事内容: {detail}
@@ -238,8 +239,8 @@ def job_rewrite():
                     output_rows.append({
                         "元の職種名": title,
                         "元の仕事内容": detail,
-                        f"複製{n}の職種名": new_title,
-                        f"複製{n}の仕事内容": new_detail
+                        "複製した職種名": new_title,
+                        "複製した仕事内容": new_detail
                     })
 
         st.session_state.df_rewrite_output = pd.DataFrame(output_rows)
