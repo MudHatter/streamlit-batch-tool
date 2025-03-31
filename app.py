@@ -3,6 +3,8 @@ import pandas as pd
 from openai import OpenAI
 from io import BytesIO
 import fugashi
+import re
+from datetime import datetime
 
 # OpenAI APIキーの設定
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
@@ -319,17 +321,16 @@ def job_detail_rewrite():
         )
 
 
-
-
-
-
 # --- アプリ切り替えメニュー ---
-menu = st.sidebar.radio("処理を選択してください", ["業務分割", "職種名バリエーション生成", "仕事内容の言い換え"])
+menu = st.sidebar.radio("処理を選択してください", ["業務分割", "言い換え複製"])
+
+# 更新日時を表示
+st.sidebar.markdown("---")
+st.sidebar.caption(f"🕒 最終更新: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 if menu == "業務分割":
     job_split()
-elif menu == "職種名バリエーション生成":
+elif menu == "言い換え複製":
     job_title_variation()
-elif menu == "仕事内容の言い換え":
     job_detail_rewrite()
 
