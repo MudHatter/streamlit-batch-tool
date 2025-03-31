@@ -12,6 +12,10 @@ uploaded_file = st.file_uploader("Excelファイルを選択", type=["xlsx"])
 if uploaded_file is not None:
     df = pd.read_excel(uploaded_file, engine="openpyxl")
 
+    # ✅ 改行コードや _x000D_ の除去をここで実行
+    df.replace({r"_x000D_": "", r"\r": "", r"\n": ""}, regex=True, inplace=True)
+
+    st.success("ファイルを読み込みました ✅")
     st.write("📄 アップロード内容（先頭5行）:")
     st.dataframe(df.head())
 
