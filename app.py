@@ -204,7 +204,7 @@ def run_rewrite_combined():
                 title = str(df.iloc[i, 0])
                 detail = str(df.iloc[i, 1])
 
-                for n in range(1, num_copies + 1):
+                for _ in range(num_copies):
                     # 職種名バリエーション生成
                     title_prompt = f"""
 以下の職種名をもとに、求人広告で使える自然なバリエーションを1つ作成してください。
@@ -245,11 +245,12 @@ def run_rewrite_combined():
                     except Exception as e:
                         new_detail = f"[ERROR] {e}"
 
+                    # 縦展開で1行ずつ記録
                     results.append({
                         "元の職種名": title,
                         "元の仕事内容": detail,
-                        f"複製{n}の職種名": new_title,
-                        f"複製{n}の仕事内容": new_detail
+                        "複製の職種名": new_title,
+                        "複製の仕事内容": new_detail
                     })
 
         df_result = pd.DataFrame(results)
