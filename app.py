@@ -2,17 +2,22 @@ import streamlit as st
 import pandas as pd
 from openai import OpenAI
 from io import BytesIO
+import fugashi
 
 # OpenAI APIキーの設定
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
 st.title("AIで求人作業内容をリストアップ＆案内文生成")
 
-# 作業リストをAIで生成
+tagger = fugashi.Tagger()
+
+# プレーンな作業名をAIで取得（修飾語はAIには含めさせない）
 def analyze_row(title, detail):
     prompt = f"""
 以下は求人広告の情報です。
 この仕事に含まれる具体的な作業内容を、箇条書きでリストアップしてください。
+箇条書きの各項目は、日本語で20文字以内に簡潔にまとめてください。
+作業名だけを出力してください（前置きや補足は不要です）。
 ---
 職種: {title}
 仕事内容: {detail}
@@ -27,6 +32,30 @@ def analyze_row(title, detail):
     except Exception as e:
         return f"[ERROR] {e}"
 
+# 職種から前置き・後置き語句を抽出（fugashi使用）
+def extract_prefix_suffix(title):
+    words = list(tagger(title))
+    prefix = ''
+    suffix = ''
+
+    for i in range(len(words)):
+        surface = words[i].surface
+        if surface.endswith("での") or surface.endswith("の"):
+            prefix = title[:words[i].stop_pos]
+            break
+
+    if ' ' in title:
+        suffix = title.split()[-1]
+
+    return prefix, suffix
+
+# 作業名に修飾語を追加
+def format_task(task, prefix, suffix):
+    result = f"{prefix}{task}"
+    if suffix:
+        result += f"　{suffix}"
+    return result
+
 # 作業リストを1作業=1行に展開
 def expand_to_rows(df):
     rows = []
@@ -37,17 +66,18 @@ def expand_to_rows(df):
 
         tasks = [line.lstrip("-・0123456789. ").strip() for line in raw_result.splitlines() if line.strip()]
 
+        prefix, suffix = extract_prefix_suffix(title)
         for task in tasks:
+            formatted = format_task(task, prefix, suffix)
             rows.append({
                 "職種": title,
                 "元の説明": detail,
-                "作業": task
+                "作業": formatted
             })
 
     return pd.DataFrame(rows)
 
 # 各作業の詳細を説明
-
 def describe_task(task, original_detail):
     prompt = f"""
 以下の仕事内容の説明をもとに、「{task}」という作業が具体的に何を意味するのかを簡潔に説明してください。
@@ -67,15 +97,24 @@ def describe_task(task, original_detail):
         return f"[ERROR] {e}"
 
 # 案内文スタイルに書き換える
-
 def rewrite_for_job_ad(original_explanation):
     prompt = f"""
-以下の説明文を、求人広告で使用する自然な仕事内容の説明文に書き換えてください。
-前向きで丁寧な日本語にしてください。
+以下の説明文を、求人広告で使用する自然な仕事の説明文に書き換えてください。
+以下のような文章のスタイルを参考にしてください。
+
+【例文1】
+製造装置への部材セットをお任せします。カメラの製造工程において、製造装置に必要な部材をセットする作業で、大小様々な材料を装置にセットして、製品の製造をスムーズに進める役割のお仕事です。
+
+【例文2】
+完成品の検査業務をお任せします。製造された製品にキズや不備がないかを確認するお仕事で、目視や道具を使って丁寧にチェックする作業です。
+
+【例文3】
+部品の梱包作業をお任せします。指定された部品をまとめ、箱に詰めてラベルを貼る作業で、出荷準備を整える大切なお仕事です。
+
 ---
 元の説明: {original_explanation}
 ---
-案内文（求人広告向け）:
+仕事の説明文（求人広告向け）:
 """
     try:
         response = client.chat.completions.create(
