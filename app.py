@@ -3,8 +3,10 @@ import pandas as pd
 from openai import OpenAI
 from io import BytesIO
 import fugashi
-import re
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+
+# 日本時間（JST）に変換
+JST = timezone(timedelta(hours=9))
 
 # OpenAI APIキーの設定
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
@@ -324,9 +326,9 @@ def job_detail_rewrite():
 # --- アプリ切り替えメニュー ---
 menu = st.sidebar.radio("処理を選択してください", ["業務分割", "言い換え複製"])
 
-# 更新日時を表示
+# 更新日時を表示（日本時間）
 st.sidebar.markdown("---")
-st.sidebar.caption(f"🕒 最終更新: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+st.sidebar.caption(f"🕒 最終更新: {datetime.now(JST).strftime('%Y-%m-%d %H:%M:%S')}（JST）")
 
 if menu == "業務分割":
     job_split()
