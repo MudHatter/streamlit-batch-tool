@@ -222,13 +222,18 @@ def job_rewrite():
                             messages=[{"role": "user", "content": prompt}],
                             temperature=0.7
                         )
-                        content = response.choices[0].message.content
-                        job_lines = content.strip().splitlines()
-                        new_title = job_lines[0].replace("職種名:", "").strip()
-                        new_detail = job_lines[1].replace("仕事内容:", "").strip()
+                        content = response.choices[0].message.content.strip()
+                        job_lines = content.splitlines()
+
+                        if len(job_lines) >= 2:
+                            new_title = job_lines[0].replace("職種名:", "").strip()
+                            new_detail = job_lines[1].replace("仕事内容:", "").strip()
+                        else:
+                            new_title = "[ERROR] 不完全な応答"
+                            new_detail = "[ERROR] 出力が不足"
                     except Exception as e:
                         new_title = f"[ERROR] {e}"
-                        new_detail = ""
+                        new_detail = "[ERROR]"
 
                     output_rows.append({
                         "元の職種名": title,
@@ -251,6 +256,7 @@ def job_rewrite():
             file_name="ai_job_rewrite_output.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
 
 
 # --- アプリ切り替えメニュー ---
