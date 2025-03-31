@@ -166,6 +166,9 @@ def job_rewrite():
     if "num_copies" not in st.session_state:
         st.session_state.num_copies = 3
 
+    if "df_rewrite_output" not in st.session_state:
+        st.session_state.df_rewrite_output = None
+
     uploaded_file = st.file_uploader("① Excelファイルを選択してください", type=["xlsx"], key="rewrite")
 
     # スライダー（処理前のみ表示）
@@ -181,7 +184,7 @@ def job_rewrite():
         st.session_state.run_rewrite = True
 
     # 処理開始後の処理ブロック
-    if st.session_state.run_rewrite and uploaded_file is not None:
+    if st.session_state.run_rewrite and uploaded_file is not None and st.session_state.df_rewrite_output is None:
         df = pd.read_excel(uploaded_file, engine="openpyxl")
         df.replace({r"_x000D_": "", r"\r": "", r"\n": ""}, regex=True, inplace=True)
 
@@ -198,7 +201,7 @@ def job_rewrite():
 
                 for n in range(1, st.session_state.num_copies + 1):
                     prompt = f"""
-以下の職種名と仕事内容をもとに、求人広告向けの自然な言い回しに変えてください。
+以下の職種名と仕事内容をもとに、求人広告向けの自然な言い回しで表現を全く別のものにリライトしてください。
 
 元の職種名: {title}
 元の仕事内容: {detail}
@@ -229,17 +232,21 @@ def job_rewrite():
                         f"複製{n}の仕事内容": new_detail
                     })
 
-        df_output = pd.DataFrame(output_rows)
-        st.success("✅ 複製処理が完了しました！")
-        st.dataframe(df_output.head(10))
+        st.session_state.df_rewrite_output = pd.DataFrame(output_rows)
 
-        excel_data = convert_df(df_output)
+    # 出力結果の表示とダウンロード
+    if st.session_state.df_rewrite_output is not None:
+        st.success("✅ 複製処理が完了しました！")
+        st.dataframe(st.session_state.df_rewrite_output.head(10))
+
+        excel_data = convert_df(st.session_state.df_rewrite_output)
         st.download_button(
             label="📥 結果をダウンロード（Excel）",
             data=excel_data,
             file_name="ai_job_rewrite_output.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
 
 
 
