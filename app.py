@@ -169,6 +169,11 @@ def job_rewrite():
     if "df_rewrite_output" not in st.session_state:
         st.session_state.df_rewrite_output = None
 
+    # 🔁 リセットボタン
+    if st.button("🔄 リセット"):
+        st.session_state.run_rewrite = False
+        st.session_state.df_rewrite_output = None
+
     uploaded_file = st.file_uploader("① Excelファイルを選択してください", type=["xlsx"], key="rewrite")
 
     # スライダー（処理前のみ表示）
@@ -246,8 +251,6 @@ def job_rewrite():
             file_name="ai_job_rewrite_output.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
-
 
 
 # --- アプリ切り替えメニュー ---
