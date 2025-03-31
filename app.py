@@ -159,10 +159,29 @@ def job_split():
 def job_rewrite():
     st.header("言い換え複製（職種名・仕事内容のパターン生成）")
 
-    uploaded_file = st.file_uploader("① Excelファイルを選択してください", type=["xlsx"], key="rewrite")
-    num_copies = st.slider("② 複製数を選んでください（2〜10）", min_value=2, max_value=10, value=3, key="num_copies")
+    # セッション状態の管理
+    if "run_rewrite" not in st.session_state:
+        st.session_state.run_rewrite = False
 
-    if uploaded_file is not None:
+    if "num_copies" not in st.session_state:
+        st.session_state.num_copies = 3
+
+    uploaded_file = st.file_uploader("① Excelファイルを選択してください", type=["xlsx"], key="rewrite")
+
+    # スライダー（処理前のみ表示）
+    if not st.session_state.run_rewrite:
+        st.session_state.num_copies = st.slider(
+            "② 複製数を選んでください（2〜10）", min_value=2, max_value=10, value=3, key="num_copies_slider"
+        )
+    else:
+        st.write(f"② 複製数（固定）: {st.session_state.num_copies}")
+
+    # 処理開始ボタン
+    if st.button("③ 処理を開始する") and not st.session_state.run_rewrite:
+        st.session_state.run_rewrite = True
+
+    # 処理開始後の処理ブロック
+    if st.session_state.run_rewrite and uploaded_file is not None:
         df = pd.read_excel(uploaded_file, engine="openpyxl")
         df.replace({r"_x000D_": "", r"\r": "", r"\n": ""}, regex=True, inplace=True)
 
@@ -170,18 +189,16 @@ def job_rewrite():
         st.write("📄 アップロード内容（先頭5行）:")
         st.dataframe(df.head())
 
-        # 処理開始ボタン
-        if st.button("③ 処理を開始する"):
-            output_rows = []
+        output_rows = []
 
-            with st.spinner("AIで言い換え処理を実行中です..."):
-                for i in range(len(df)):
-                    title = str(df.iloc[i, 0])
-                    detail = str(df.iloc[i, 1])
+        with st.spinner("AIで言い換え処理を実行中です..."):
+            for i in range(len(df)):
+                title = str(df.iloc[i, 0])
+                detail = str(df.iloc[i, 1])
 
-                    for n in range(1, num_copies + 1):
-                        prompt = f"""
-以下の職種名と仕事内容をもとに、求人広告向けの自然な言い回しで表現を言い換えてください。
+                for n in range(1, st.session_state.num_copies + 1):
+                    prompt = f"""
+以下の職種名と仕事内容をもとに、求人広告向けの自然な言い回しに変えてください。
 
 元の職種名: {title}
 元の仕事内容: {detail}
@@ -191,38 +208,39 @@ def job_rewrite():
 職種名: ○○○○
 仕事内容: ○○○○
 """
-                        try:
-                            response = client.chat.completions.create(
-                                model="gpt-3.5-turbo",
-                                messages=[{"role": "user", "content": prompt}],
-                                temperature=0.7
-                            )
-                            content = response.choices[0].message.content
-                            job_lines = content.strip().splitlines()
-                            new_title = job_lines[0].replace("職種名:", "").strip()
-                            new_detail = job_lines[1].replace("仕事内容:", "").strip()
-                        except Exception as e:
-                            new_title = f"[ERROR] {e}"
-                            new_detail = ""
+                    try:
+                        response = client.chat.completions.create(
+                            model="gpt-3.5-turbo",
+                            messages=[{"role": "user", "content": prompt}],
+                            temperature=0.7
+                        )
+                        content = response.choices[0].message.content
+                        job_lines = content.strip().splitlines()
+                        new_title = job_lines[0].replace("職種名:", "").strip()
+                        new_detail = job_lines[1].replace("仕事内容:", "").strip()
+                    except Exception as e:
+                        new_title = f"[ERROR] {e}"
+                        new_detail = ""
 
-                        output_rows.append({
-                            "元の職種名": title,
-                            "元の仕事内容": detail,
-                            f"複製{n}の職種名": new_title,
-                            f"複製{n}の仕事内容": new_detail
-                        })
+                    output_rows.append({
+                        "元の職種名": title,
+                        "元の仕事内容": detail,
+                        f"複製{n}の職種名": new_title,
+                        f"複製{n}の仕事内容": new_detail
+                    })
 
-            df_output = pd.DataFrame(output_rows)
-            st.success("✅ 複製処理が完了しました！")
-            st.dataframe(df_output.head(10))
+        df_output = pd.DataFrame(output_rows)
+        st.success("✅ 複製処理が完了しました！")
+        st.dataframe(df_output.head(10))
 
-            excel_data = convert_df(df_output)
-            st.download_button(
-                label="📥 結果をダウンロード（Excel）",
-                data=excel_data,
-                file_name="ai_job_rewrite_output.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+        excel_data = convert_df(df_output)
+        st.download_button(
+            label="📥 結果をダウンロード（Excel）",
+            data=excel_data,
+            file_name="ai_job_rewrite_output.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
 
 
 # --- アプリ切り替えメニュー ---
