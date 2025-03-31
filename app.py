@@ -235,6 +235,7 @@ def run_rewrite_combined():
                     try:
                         prompt = f"""
 以下の職種名を、求人広告で使える自然な職種名に整えてください。
+出力は25文字以内で、「です」「ます」や句読点を付けずに簡潔な名詞として作成してください。
 ---
 元の職種名（案）: {raw_variation}
 ---
@@ -246,6 +247,27 @@ def run_rewrite_combined():
                             temperature=0.5
                         )
                         new_title = response.choices[0].message.content.strip()
+
+                        # 🔽 追加処理：整形後の職種名をクリーンアップ
+                        new_title = new_title.splitlines()[0]  # 複数行のうち最初の行のみ
+                        new_title = new_title.split("バリエーション")[0].strip()  # 「バリエーション」以降を削除
+
+                        # 職種名でない表現を検出し再修正
+                        if any(x in new_title for x in ["する", "です", "募集"]):
+                            reprompt = f"""
+以下の表現は職種名として不適切です。求人広告で使える自然な職種名に修正してください。
+---
+修正前: {new_title}
+---
+職種名:
+"""
+                            retry = client.chat.completions.create(
+                                model="gpt-3.5-turbo",
+                                messages=[{"role": "user", "content": reprompt}],
+                                temperature=0.3
+                            )
+                            new_title = retry.choices[0].message.content.strip().splitlines()[0]
+
                     except Exception as e:
                         new_title = f"[ERROR] {e}"
 
