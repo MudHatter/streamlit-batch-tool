@@ -15,6 +15,7 @@ tagger = fugashi.Tagger()
 
 # --- 共通関数 ---
 def convert_df(df):
+    from io import BytesIO
     output = BytesIO()
     df.to_excel(output, index=False, engine="openpyxl")
     return output.getvalue()
@@ -175,21 +176,21 @@ def job_split():
         )
 
 
-# --- 職種名のバリエーション生成（ステップ1） ---
-def job_title_variation():
-    st.header("ステップ1: 職種名バリエーション生成")
+# --- 言い換え複製（職種名と仕事内容を一括処理） ---
+def run_rewrite_combined():
+    st.header("言い換え複製（職種名と仕事内容を一括リライト）")
 
-    if "job_title_output" not in st.session_state:
-        st.session_state.job_title_output = None
+    if "rewrite_combined_output" not in st.session_state:
+        st.session_state.rewrite_combined_output = None
 
     # リセットボタン
-    if st.button("🔄 リセット（職種名バリエーション）"):
-        st.session_state.job_title_output = None
+    if st.button("🔄 リセット"):
+        st.session_state.rewrite_combined_output = None
 
-    uploaded_file = st.file_uploader("① Excelファイルを選択してください（A列に職種名）", type=["xlsx"], key="title_upload")
-    num_copies = st.slider("② バリエーション数（1〜5）", min_value=1, max_value=5, value=3)
+    uploaded_file = st.file_uploader("Excelファイルを選択（A列=職種名, B列=仕事内容）", type=["xlsx"], key="combined_upload")
+    num_copies = st.slider("バリエーション数（1〜5）", min_value=1, max_value=5, value=3)
 
-    if st.button("③ 職種名バリエーションを生成") and uploaded_file:
+    if st.button("処理を開始する") and uploaded_file:
         df = pd.read_excel(uploaded_file, engine="openpyxl")
         df.replace({r"_x000D_": "", r"\r": "", r"\n": ""}, regex=True, inplace=True)
 
@@ -198,92 +199,34 @@ def job_title_variation():
 
         results = []
 
-        with st.spinner("AIで職種名のバリエーションを生成中..."):
-            for i in range(len(df)):
-                title = str(df.iloc[i, 0])
-
-                for _ in range(num_copies):
-                    prompt = f"""
-以下の職種名をもとに、求人広告で使える自然なバリエーションを作成してください。
-同じ意味を保ちつつ、言い換えに工夫を加えてください。
-
-【言い換えの例】
-- スタッフ／作業員／担当者 などの語尾を入れ替える
-- 「電子部品の」→「精密パーツの」「部品の」などに置き換える
-- 語順を調整する（例：部品の組立 → 組立担当（部品））
-
-【ルール】
-- バリエーションはできるだけ多様にしてください
-- 「〇〇（バリエーション2）」のような表現は禁止
-- 同じ単語を繰り返すだけの表現は避けてください
-
-元の職種名: {title}
----
-出力形式（1つ）:
-職種名: ○○○○
-"""
-                    try:
-                        response = client.chat.completions.create(
-                            model="gpt-3.5-turbo",
-                            messages=[{"role": "user", "content": prompt}],
-                            temperature=0.7
-                        )
-                        content = response.choices[0].message.content.strip()
-                        lines = content.splitlines()
-                        line = next((l for l in lines if "職種名:" in l), "")
-                        variation = line.replace("職種名:", "").strip()
-                    except Exception as e:
-                        error_msg = str(e)
-                        if "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
-                            st.error("⚠ OpenAIの利用上限に達しています。しばらく時間をおいて再実行してください。")
-                        variation = f"[ERROR] {e}"
-
-                    results.append({"元の職種名": title, "バリエーション職種名": variation})
-
-        df_result = pd.DataFrame(results)
-        st.session_state.job_title_output = df_result
-
-    if st.session_state.job_title_output is not None:
-        st.success("✅ バリエーション生成完了！")
-        st.dataframe(st.session_state.job_title_output.head(10))
-
-        excel_data = convert_df(st.session_state.job_title_output)
-        st.download_button(
-            label="📥 職種名バリエーションをダウンロード",
-            data=excel_data,
-            file_name="job_title_variations.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-
-# --- 仕事内容の案内文生成（ステップ2） ---
-def job_detail_rewrite():
-    st.header("ステップ2: 仕事内容の言い換え・案内文生成")
-
-    if "job_detail_output" not in st.session_state:
-        st.session_state.job_detail_output = None
-
-    # リセットボタン
-    if st.button("🔄 リセット（仕事内容の言い換え）"):
-        st.session_state.job_detail_output = None
-
-    uploaded_file = st.file_uploader("① 職種名と仕事内容を含むExcelファイルを選択（A列=職種名, B列=仕事内容）", type=["xlsx"], key="detail_upload")
-
-    if st.button("② 案内文を生成する") and uploaded_file:
-        df = pd.read_excel(uploaded_file, engine="openpyxl")
-        df.replace({r"_x000D_": "", r"\r": "", r"\n": ""}, regex=True, inplace=True)
-
-        st.success("ファイルを読み込みました ✅")
-        st.dataframe(df.head())
-
-        output_rows = []
-
-        with st.spinner("AIで案内文を生成中..."):
+        with st.spinner("AIで職種名と言い換え文章を生成中..."):
             for i in range(len(df)):
                 title = str(df.iloc[i, 0])
                 detail = str(df.iloc[i, 1])
 
-                prompt = f"""
+                for n in range(1, num_copies + 1):
+                    # 職種名バリエーション生成
+                    title_prompt = f"""
+以下の職種名をもとに、求人広告で使える自然なバリエーションを1つ作成してください。
+同じ意味を保ちつつ、単語の順序や語尾などを変えてください。
+「〇〇（バリエーション2）」のような表現は禁止です。
+
+元の職種名: {title}
+---
+職種名:
+"""
+                    try:
+                        title_response = client.chat.completions.create(
+                            model="gpt-3.5-turbo",
+                            messages=[{"role": "user", "content": title_prompt}],
+                            temperature=0.7
+                        )
+                        new_title = title_response.choices[0].message.content.strip()
+                    except Exception as e:
+                        new_title = f"[ERROR] {e}"
+
+                    # 仕事内容案内文生成
+                    detail_prompt = f"""
 以下の職種名と仕事内容をもとに、単語を言い換えたり、記号を変更したり、語順を変更したりして、全く異なる表現にリライトしてください。
 出力は、求人広告で使用する自然な文章で作成してください。
 ---
@@ -292,33 +235,35 @@ def job_detail_rewrite():
 ---
 案内文:
 """
-                try:
-                    response = client.chat.completions.create(
-                        model="gpt-3.5-turbo",
-                        messages=[{"role": "user", "content": prompt}],
-                        temperature=0.7
-                    )
-                    content = response.choices[0].message.content.strip()
-                except Exception as e:
-                    error_msg = str(e)
-                    if "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
-                        st.error("⚠ OpenAIの利用上限に達しています。しばらく時間をおいて再実行してください。")
-                    content = f"[ERROR] {e}"
+                    try:
+                        detail_response = client.chat.completions.create(
+                            model="gpt-3.5-turbo",
+                            messages=[{"role": "user", "content": detail_prompt}],
+                            temperature=0.7
+                        )
+                        new_detail = detail_response.choices[0].message.content.strip()
+                    except Exception as e:
+                        new_detail = f"[ERROR] {e}"
 
-                output_rows.append({"職種名": title, "仕事内容": detail, "案内文": content})
+                    results.append({
+                        "元の職種名": title,
+                        "元の仕事内容": detail,
+                        f"複製{n}の職種名": new_title,
+                        f"複製{n}の仕事内容": new_detail
+                    })
 
-        df_result = pd.DataFrame(output_rows)
-        st.session_state.job_detail_output = df_result
+        df_result = pd.DataFrame(results)
+        st.session_state.rewrite_combined_output = df_result
 
-    if st.session_state.job_detail_output is not None:
-        st.success("✅ 案内文生成完了！")
-        st.dataframe(st.session_state.job_detail_output.head(10))
+    if st.session_state.rewrite_combined_output is not None:
+        st.success("✅ 言い換え複製 完了！")
+        st.dataframe(st.session_state.rewrite_combined_output.head(10))
 
-        excel_data = convert_df(st.session_state.job_detail_output)
+        excel_data = convert_df(st.session_state.rewrite_combined_output)
         st.download_button(
-            label="📥 案内文入りファイルをダウンロード",
+            label="📥 結果をダウンロード（Excel）",
             data=excel_data,
-            file_name="job_detail_rewritten.xlsx",
+            file_name="ai_job_rewrite_output.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
@@ -333,6 +278,5 @@ st.sidebar.caption(f"🕒 最終更新: {datetime.now(JST).strftime('%Y-%m-%d %H
 if menu == "業務分割":
     job_split()
 elif menu == "言い換え複製":
-    job_title_variation()
-    job_detail_rewrite()
+    run_rewrite_combined()
 
