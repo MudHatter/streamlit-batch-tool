@@ -8,10 +8,6 @@ openai.api_key = st.secrets["openai"]["api_key"]
 
 st.title("求人情報をAIで分析")
 
-def convert_df(df):
-    output = BytesIO()
-    df.to_excel(output, index=False, engine="openpyxl")
-    return output.getvalue()
 
 uploaded_file = st.file_uploader("Excelファイルを選択", type=["xlsx"])
 
@@ -59,12 +55,16 @@ if uploaded_file is not None:
     st.dataframe(df.head(10))
 
     # ダウンロード用
+    def convert_df(df):
+    output = BytesIO()
+    df.to_excel(output, index=False, engine="openpyxl")
+    return output.getvalue()
 
-excel_data = convert_df(df)
+    excel_data = convert_df(df)
 
-st.download_button(
-    label="📥 処理結果をダウンロード",
-    data=excel_data,
-    file_name="ai_processed.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    st.download_button(
+        label="📥 処理結果をダウンロード",
+        data=excel_data,
+        file_name="ai_processed.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
