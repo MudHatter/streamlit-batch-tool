@@ -19,6 +19,9 @@ def convert_df(df):
 def job_split():
     st.header("業務分割（仕事内容を複数に分ける）")
 
+    if "df_result_split" not in st.session_state:
+        st.session_state.df_result_split = None
+
     def analyze_row(title, detail):
         prompt = f"""
 以下は求人広告の情報です。
@@ -133,7 +136,7 @@ def job_split():
 
     uploaded_file = st.file_uploader("Excelファイルを選択", type=["xlsx"])
 
-    if uploaded_file is not None:
+    if uploaded_file is not None and st.session_state.df_result_split is None:
         df = pd.read_excel(uploaded_file, engine="openpyxl")
         df.replace({r"_x000D_": "", r"\r": "", r"\n": ""}, regex=True, inplace=True)
 
@@ -153,10 +156,13 @@ def job_split():
         df_result = df_expanded[[df.columns[0], df.columns[1], "分割後の職種名", "案内文"]].copy()
         df_result.rename(columns={"案内文": "分割後の仕事詳細"}, inplace=True)
 
-        st.success("✅ 全ステップ完了！")
-        st.dataframe(df_result.head(10))
+        st.session_state.df_result_split = df_result
 
-        excel_data = convert_df(df_result)
+    if st.session_state.df_result_split is not None:
+        st.success("✅ 全ステップ完了！")
+        st.dataframe(st.session_state.df_result_split.head(10))
+
+        excel_data = convert_df(st.session_state.df_result_split)
         st.download_button(
             label="📥 結果をダウンロード（Excel）",
             data=excel_data,
