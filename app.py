@@ -41,7 +41,7 @@ def extract_prefix_suffix(title):
     for i in range(len(words)):
         surface = words[i].surface
         if surface.endswith("での") or surface.endswith("の"):
-            prefix = title[:words[i].stop_pos]
+            prefix = ''.join([w.surface for w in words[:i+1]])
             break
 
     if ' ' in title:
