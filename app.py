@@ -70,8 +70,8 @@ def describe_task(task, original_detail):
 
 def rewrite_for_job_ad(original_explanation):
     prompt = f"""
-以下の説明文を、求人広告で使用する自然な案内文に書き換えてください。
-読み手にやってみようと思わせる、前向きで丁寧な日本語にしてください。
+以下の説明文を、求人広告で使用する自然な仕事内容の説明文に書き換えてください。
+前向きで丁寧な日本語にしてください。
 ---
 元の説明: {original_explanation}
 ---
