@@ -53,9 +53,18 @@ if uploaded_file is not None:
     st.dataframe(df.head(10))
 
     # ダウンロード用
-    @st.cache_data
-    def convert_df(df):
-        return df.to_excel(index=False, engine="openpyxl")
+    from io import BytesIO
 
-    excel_data = convert_df(df)
-    st.download_button("📥 処理結果をダウンロード", data=excel_data, file_name="ai_processed.xlsx")
+def convert_df(df):
+    output = BytesIO()
+    df.to_excel(output, index=False, engine="openpyxl")
+    return output.getvalue()
+
+excel_data = convert_df(df)
+
+st.download_button(
+    label="📥 処理結果をダウンロード",
+    data=excel_data,
+    file_name="ai_processed.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
