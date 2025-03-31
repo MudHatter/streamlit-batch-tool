@@ -6,9 +6,9 @@ from io import BytesIO
 # ✅ OpenAIクライアント初期化
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
-st.title("求人情報の作業内容をAIでリストアップ（縦展開）")
+st.title("AIで作業リスト＆詳細を生成")
 
-# ✅ 1件ずつAIに問い合わせて作業リストを得る
+# ✅ 作業リストアップ
 def analyze_row(title, detail):
     prompt = f"""
 以下は求人広告の情報です。
@@ -27,40 +27,45 @@ def analyze_row(title, detail):
     except Exception as e:
         return f"[ERROR] {e}"
 
-# ✅ AIで作業リストを取得し、元のDataFrameに1列追加
-def process_dataframe(df):
-    results = []
-    for i in range(len(df)):
-        title = str(df.iloc[i, 0])
-        detail = str(df.iloc[i, 1])
-        result = analyze_row(title, detail)
-        results.append(result)
-    df["作業リスト"] = results
-    return df
-
-# ✅ 作業リストを縦に展開する関数（1作業＝1行）
+# ✅ 作業リスト→1行1作業に展開
 def expand_to_rows(df):
-    expanded_rows = []
-
+    rows = []
     for i in range(len(df)):
         title = str(df.iloc[i, 0])
         detail = str(df.iloc[i, 1])
-        task_list_raw = str(df.iloc[i, 2])
+        raw_result = analyze_row(title, detail)
 
-        # 箇条書きを1行ずつ分割（-・番号などに対応）
         tasks = [line.lstrip("-・0123456789. ").strip()
-                 for line in task_list_raw.splitlines() if line.strip()]
+                 for line in raw_result.splitlines() if line.strip()]
 
         for task in tasks:
-            expanded_rows.append({
+            rows.append({
                 "職種": title,
-                "詳細": detail,
+                "元の説明": detail,
                 "作業": task
             })
 
-    return pd.DataFrame(expanded_rows)
+    return pd.DataFrame(rows)
 
-# ✅ ダウンロード用（Excelバイナリ）
+# ✅ 作業の説明を追加する関数
+def describe_task(task, original_detail):
+    prompt = f"""
+以下の仕事内容の説明をもとに、「{task}」という作業が具体的に何を意味するのかを簡潔に説明してください。
+---
+仕事内容の説明: {original_detail}
+---
+作業の説明:"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"[ERROR] {e}"
+
+# ✅ Excel出力用変換
 def convert_df(df):
     output = BytesIO()
     df.to_excel(output, index=False, engine="openpyxl")
@@ -77,13 +82,20 @@ if uploaded_file is not None:
     st.write("📄 アップロード内容（先頭5行）:")
     st.dataframe(df.head())
 
-    # ✅ AIで処理（作業リスト列を追加）
-    df_processed = process_dataframe(df)
+    # ✅ AIで作業をリストアップし縦展開
+    df_expanded = expand_to_rows(df)
 
-    # ✅ 縦展開（1行1作業に変換）
-    df_expanded = expand_to_rows(df_processed)
+    st.write("🛠 作業リスト展開（先頭10行）:")
+    st.dataframe(df_expanded.head(10))
 
-    st.write("🛠 AIによる作業内容（縦展開）:")
+    # ✅ 各作業に詳細説明を追加（D列）
+    st.info("作業ごとの詳細をAIで説明中...")
+    df_expanded["作業詳細"] = df_expanded.apply(
+        lambda row: describe_task(row["作業"], row["元の説明"]),
+        axis=1
+    )
+
+    st.success("✅ 作業詳細を追加しました！")
     st.dataframe(df_expanded.head(10))
 
     # ✅ ダウンロード
@@ -91,6 +103,6 @@ if uploaded_file is not None:
     st.download_button(
         label="📥 結果をダウンロード（Excel）",
         data=excel_data,
-        file_name="ai_processed_vertical.xlsx",
+        file_name="ai_tasks_detailed.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
