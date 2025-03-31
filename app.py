@@ -173,8 +173,8 @@ def job_rewrite():
 
     # スライダー（処理前のみ表示）
     if not st.session_state.run_rewrite:
-        st.session_state.num_copies = st.slider(
-            "② 複製数を選んでください（2〜10）", min_value=2, max_value=10, value=3, key="num_copies_slider"
+        st.slider(
+            "② 複製数を選んでください（2〜10）", min_value=2, max_value=10, value=3, key="num_copies"
         )
     else:
         st.write(f"② 複製数（固定）: {st.session_state.num_copies}")
@@ -201,7 +201,7 @@ def job_rewrite():
 
                 for n in range(1, st.session_state.num_copies + 1):
                     prompt = f"""
-以下の職種名と仕事内容をもとに、求人広告向けの自然な言い回しで表現を全く別のものにリライトしてください。
+以下の職種名と仕事内容をもとに、求人広告向けの自然な言い回しに変えてください。
 
 元の職種名: {title}
 元の仕事内容: {detail}
