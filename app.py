@@ -37,6 +37,9 @@ def job_split():
             )
             return response.choices[0].message.content
         except Exception as e:
+            error_msg = str(e)
+            if "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
+                st.error("⚠ OpenAIの利用上限に達しています。しばらく時間をおいて再実行してください。")
             return f"[ERROR] {e}"
 
     def extract_prefix_suffix(title):
@@ -91,6 +94,9 @@ def job_split():
             )
             return response.choices[0].message.content
         except Exception as e:
+            error_msg = str(e)
+            if "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
+                st.error("⚠ OpenAIの利用上限に達しています。しばらく時間をおいて再実行してください。")
             return f"[ERROR] {e}"
 
     def rewrite_for_job_ad(original_explanation):
@@ -120,6 +126,9 @@ def job_split():
             )
             return response.choices[0].message.content
         except Exception as e:
+            error_msg = str(e)
+            if "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
+                st.error("⚠ OpenAIの利用上限に達しています。しばらく時間をおいて再実行してください。")
             return f"[ERROR] {e}"
 
     uploaded_file = st.file_uploader("Excelファイルを選択", type=["xlsx"])
@@ -154,6 +163,7 @@ def job_split():
             file_name="ai_job_ads_output.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
 
 # --- 言い換え複製処理（改善版） ---
 def job_rewrite():
@@ -252,8 +262,12 @@ def job_rewrite():
                         used_titles.add(new_title)
 
                     except Exception as e:
-                        new_title = f"[ERROR] {e}"
+                        error_msg = str(e)
+                        new_title = f"[ERROR] {error_msg}"
                         new_detail = "[ERROR]"
+
+                        if "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
+                            st.error("⚠ OpenAIの利用上限に達しています。しばらく時間をおいて再実行してください。")
 
                     output_rows.append({
                         "元の職種名": title,
