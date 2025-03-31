@@ -206,8 +206,7 @@ def job_rewrite():
 
                 for n in range(1, st.session_state.num_copies + 1):
                     prompt = f"""
-以下の職種名と仕事内容をもとに、言葉の順番や記号、言い回しを変更して、全く違う表現の文章にリライトしてください。
-文章は求人広告向けの自然な言い回しで作成してください。
+以下の職種名と仕事内容をもとに、求人広告向けの自然な言い回しに変えてください。
 
 元の職種名: {title}
 元の仕事内容: {detail}
@@ -226,12 +225,20 @@ def job_rewrite():
                         content = response.choices[0].message.content.strip()
                         job_lines = content.splitlines()
 
-                        if len(job_lines) >= 2:
-                            new_title = job_lines[0].replace("職種名:", "").strip()
-                            new_detail = job_lines[1].replace("仕事内容:", "").strip()
-                        else:
-                            new_title = "[ERROR] 不完全な応答"
-                            new_detail = "[ERROR] 出力が不足"
+                        new_title = ""
+                        new_detail = ""
+
+                        for line in job_lines:
+                            if "職種名:" in line:
+                                new_title = line.replace("職種名:", "").strip()
+                            elif "仕事内容:" in line:
+                                new_detail = line.replace("仕事内容:", "").strip()
+
+                        if not new_title:
+                            new_title = "[ERROR] 職種名なし"
+                        if not new_detail:
+                            new_detail = "[ERROR] 仕事内容なし"
+
                     except Exception as e:
                         new_title = f"[ERROR] {e}"
                         new_detail = "[ERROR]"
@@ -257,6 +264,7 @@ def job_rewrite():
             file_name="ai_job_rewrite_output.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
 
 
 
