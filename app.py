@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
-import openai
+from openai import OpenAI
 from io import BytesIO
 
-# ✅ OpenAI APIキー（Streamlit CloudのSecretsで設定済み）
-openai.api_key = st.secrets["openai"]["api_key"]
+# ✅ OpenAI API
+client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
 st.title("求人情報をAIで分析")
 
@@ -19,12 +19,12 @@ def analyze_row(title, detail):
 仕事内容: {detail}
 """
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3
         )
-        return response["choices"][0]["message"]["content"]
+        return response.choices[0].message.content
     except Exception as e:
         return f"[ERROR] {e}"
 
