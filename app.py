@@ -29,13 +29,13 @@ def analyze_row(title, detail):
 # ✅ DataFrame全体を処理（C列を追加）
 def process_dataframe(df):
     task_results = []
-    for i in range(1, len(df)):
+    for i in range(len(df)):
         title = str(df.iloc[i, 0])
         detail = str(df.iloc[i, 1])
         result = analyze_row(title, detail)
         task_results.append(result)
 
-    df.loc[1:, "作業リスト"] = task_results
+    df["作業リスト"] = task_results
     return df
 
 # ✅ ダウンロード用（BytesIOで変換）
