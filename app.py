@@ -203,10 +203,17 @@ def job_rewrite():
             for i in range(len(df)):
                 title = str(df.iloc[i, 0])
                 detail = str(df.iloc[i, 1])
+                used_titles = set()
 
                 for n in range(1, st.session_state.num_copies + 1):
                     prompt = f"""
 以下の職種名と仕事内容をもとに、求人広告向けの自然な言い回しに変えてください。
+ただし、同じような表現を繰り返さず、できるだけ異なるバリエーションを出してください。
+
+参考となる職種名の言い換え例:
+- 組立スタッフ → 組立オペレーター、組立作業員、製造ライン担当
+- 検査スタッフ → 品質チェック係、検品担当、検査オペレーター
+- 梱包スタッフ → 出荷準備係、箱詰め作業員、梱包オペレーター
 
 元の職種名: {title}
 元の仕事内容: {detail}
@@ -220,7 +227,7 @@ def job_rewrite():
                         response = client.chat.completions.create(
                             model="gpt-3.5-turbo",
                             messages=[{"role": "user", "content": prompt}],
-                            temperature=0.7
+                            temperature=0.8
                         )
                         content = response.choices[0].message.content.strip()
                         job_lines = content.splitlines()
@@ -238,6 +245,11 @@ def job_rewrite():
                             new_title = "[ERROR] 職種名なし"
                         if not new_detail:
                             new_detail = "[ERROR] 仕事内容なし"
+
+                        # 重複チェック
+                        if new_title in used_titles:
+                            new_title += f"（バリエーション{n}）"
+                        used_titles.add(new_title)
 
                     except Exception as e:
                         new_title = f"[ERROR] {e}"
@@ -264,6 +276,7 @@ def job_rewrite():
             file_name="ai_job_rewrite_output.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
 
 
 
