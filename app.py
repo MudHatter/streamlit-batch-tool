@@ -8,7 +8,7 @@ from rewrite_with_pr import rewrite_pr
 JST = timezone(timedelta(hours=9))
 
 # --- アプリ切り替えメニュー ---
-menu = st.sidebar.radio("処理を選択してください", ["業務分割", "言い換え複製(職種と仕事内容)", "言い換え複製(職種とキャッチコピー)"])
+menu = st.sidebar.radio("処理を選択してください", ["業務分割", "言い換え複製(職種と仕事内容)", "言い換え複製(職種とキャッチ)"])
 
 # --- 更新日時表示（last_updated.txtから読み込み） ---
 try:
@@ -24,5 +24,5 @@ if menu == "業務分割":
     job_split()
 elif menu == "言い換え複製(職種と仕事内容)":
     job_rewrite()
-elif menu == "言い換え複製(職種とキャッチコピー)":
+elif menu == "言い換え複製(職種とキャッチ)":
     rewrite_pr()
