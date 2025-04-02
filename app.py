@@ -8,7 +8,7 @@ from rewrite_module2 import job_rewrite
 JST = timezone(timedelta(hours=9))
 
 # --- アプリ切り替えメニュー ---
-menu = st.sidebar.radio("処理を選択してください", ["業務分割", "言い換え複製", "言い換え複製改"])
+menu = st.sidebar.radio("処理を選択してください", ["業務分割", "言い換え複製(職種と仕事内容)"])
 
 # 更新日時を表示（日本時間）
 st.sidebar.markdown("---")
@@ -16,7 +16,5 @@ st.sidebar.caption(f"🕒 最終更新: {datetime.now(JST).strftime('%Y-%m-%d %H
 
 if menu == "業務分割":
     job_split()
-elif menu == "言い換え複製":
-    run_rewrite_combined()
-elif menu == "言い換え複製改":
+elif menu == "言い換え複製(職種と仕事内容)":
     job_rewrite()

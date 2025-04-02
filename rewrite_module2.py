@@ -29,7 +29,7 @@ def job_rewrite():
         df.replace({r"_x000D_": "", r"\r": "", r"\n": ""}, regex=True, inplace=True)
         st.dataframe(df.head())
 
-        if st.button("▶ 処理を開始する"):
+        if st.button("処理を開始する"):
             expanded_rows = []
 
             for i in range(len(df)):
@@ -39,7 +39,7 @@ def job_rewrite():
                 # --- ステップ1: 職種名をAIでリスト出力 ---
                 prompt_title = f"""
 以下の職種名をもとに、求人広告で使える自然な職種名のバリエーションを{num_variations}個作成してください。
-表現を言い換え、重複しないようにしてください。
+単語を言い換えたり、記号を変更したり、語順を変更したり、表現を言い換えて、重複しないようにしてください。
 箇条書きで出力してください。
 ---
 職種名: {title}
