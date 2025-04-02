@@ -1,14 +1,14 @@
 import streamlit as st
 from datetime import datetime, timedelta, timezone
 from split_module import job_split
-from rewrite_module import run_rewrite_combined
-from rewrite_module2 import job_rewrite
+from rewrite_with_detail import job_rewrite
+from rewrite_with_pr import rewrite_pr
 
 # 日本時間（JST）に変換
 JST = timezone(timedelta(hours=9))
 
 # --- アプリ切り替えメニュー ---
-menu = st.sidebar.radio("処理を選択してください", ["業務分割", "言い換え複製(職種と仕事内容)"])
+menu = st.sidebar.radio("処理を選択してください", ["業務分割", "言い換え複製(職種と仕事内容)", "言い換え複製(職種とキャッチコピー)"])
 
 # --- 更新日時表示（last_updated.txtから読み込み） ---
 try:
@@ -24,3 +24,5 @@ if menu == "業務分割":
     job_split()
 elif menu == "言い換え複製(職種と仕事内容)":
     job_rewrite()
+elif menu == "言い換え複製(職種とキャッチコピー)":
+    rewrite_pr()

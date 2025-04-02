@@ -138,7 +138,7 @@ def job_split():
                 st.error("⚠ OpenAIの利用上限に達しています。しばらく時間をおいて再実行してください。")
             return f"[ERROR] {e}"
 
-    uploaded_file = st.file_uploader("Excelファイルを選択", type=["xlsx"])
+    uploaded_file = st.file_uploader("Excelファイルを選択してください（A列=職種名, B列=仕事内容）※1行目は見出し扱いになります", type=["xlsx"])
 
     if uploaded_file is not None and st.session_state.df_result_split is None:
         df = pd.read_excel(uploaded_file, engine="openpyxl")

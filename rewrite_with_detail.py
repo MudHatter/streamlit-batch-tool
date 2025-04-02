@@ -15,13 +15,13 @@ def convert_df(df):
 
 # --- 言い換え複製の新バージョン ---
 def job_rewrite():
-    st.header("言い換え複製（職種・仕事内容を複製してリライト）")
+    st.header("言い換え複製（職種と仕事内容）")
 
     if "df_result_rewrite" not in st.session_state:
         st.session_state.df_result_rewrite = None
 
-    uploaded_file = st.file_uploader("Excelファイルを選択（A列=職種名, B列=仕事内容）", type=["xlsx"])
-    num_variations = st.slider("複製数（2〜10）", min_value=2, max_value=10, value=3)
+    uploaded_file = st.file_uploader("Excelファイルを選択してください（A列=職種名, B列=仕事内容）※1行目は見出し扱いになります", type=["xlsx"])
+    num_variations = st.slider("複製数を指定してください（2〜10）", min_value=2, max_value=10, value=3)
 
     if uploaded_file is not None:
         st.success("ファイルを読み込みました ✅")
@@ -94,6 +94,6 @@ def job_rewrite():
         st.download_button(
             label="📥 結果をダウンロード（Excel）",
             data=excel_data,
-            file_name="ai_job_rewrite_output.xlsx",
+            file_name="rewrite_job_output.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
