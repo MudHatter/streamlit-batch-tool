@@ -17,6 +17,4 @@ st.sidebar.caption(f"🕒 最終更新: {datetime.now(JST).strftime('%Y-%m-%d %H
 if menu == "業務分割":
     job_split()
 elif menu == "言い換え複製":
-    run_rewrite_combined()
-elif menu == "言い換え複製改":
     job_rewrite()
