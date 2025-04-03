@@ -4,6 +4,12 @@ from split_module import job_split
 from rewrite_with_detail import job_rewrite
 from rewrite_with_pr import rewrite_pr
 
+st.set_page_config(
+    page_title="求人支援AIツール",
+    page_icon="🧠",
+    layout="wide"
+)
+
 # 日本時間（JST）に変換
 JST = timezone(timedelta(hours=9))
 
